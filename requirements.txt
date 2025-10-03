@@ -1,0 +1,8 @@
+torch==2.0.1+cu118
+torchvision==0.15.2+cu118
+torchaudio==2.0.2+cu118
+openai-whisper==20231117
+piper-tts==1.1.0
+pyaudio==0.2.11
+numpy==1.24.3
+soundfile==0.12.1
