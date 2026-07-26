@@ -39,7 +39,7 @@ def _index() -> int:
     return 0
 
 
-def _verify() -> int:
+def _integrity_report() -> tuple[dict[str, object] | None, int]:
     settings = load_settings()
     try:
         report = verify_manifest(
@@ -49,13 +49,29 @@ def _verify() -> int:
         )
     except (FileNotFoundError, ValueError) as exc:
         print(str(exc), file=sys.stderr)
-        return 4
+        return None, 4
+    return report, 0
+
+
+def _verify() -> int:
+    report, error_code = _integrity_report()
+    if report is None:
+        return error_code
     print(json.dumps(report, indent=2))
     return 0 if report["ok"] else 4
 
 
 def _ask(question: str, use_openai: bool) -> int:
     settings = load_settings()
+    report, error_code = _integrity_report()
+    if report is None:
+        return error_code
+    if not report["ok"]:
+        print("Approved snapshot integrity check failed; retrieval was refused.", file=sys.stderr)
+        print(json.dumps(report, indent=2), file=sys.stderr)
+        print("Review the source change, then run `captain-os index` to accept it.", file=sys.stderr)
+        return 4
+
     passages = retrieve(
         settings.snapshot_dir,
         question,
@@ -85,7 +101,7 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("doctor", help="Show local configuration and capability mode.")
     commands.add_parser("index", help="Build a hash manifest of approved text sources.")
     commands.add_parser("verify", help="Detect approved-source changes since indexing.")
-    ask = commands.add_parser("ask", help="Retrieve cited passages for a question.")
+    ask = commands.add_parser("ask", help="Verify integrity, then retrieve cited passages.")
     ask.add_argument("question")
     ask.add_argument("--openai", action="store_true", help="Use optional OpenAI synthesis.")
     return parser
