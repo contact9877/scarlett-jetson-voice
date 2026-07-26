@@ -3,6 +3,7 @@ from pathlib import Path
 import pytest
 
 from captain_os.agent import INSTRUCTIONS
+from captain_os.cli import _ask
 from captain_os.manifest import build_manifest, verify_manifest
 from captain_os.retrieval import retrieve
 
@@ -32,6 +33,19 @@ def test_manifest_verification_detects_changed_source(tmp_path: Path) -> None:
     report = verify_manifest(snapshot, manifest)
     assert report["ok"] is False
     assert report["changed"] == ["authority.md"]
+
+
+def test_ask_refuses_changed_snapshot(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    data = tmp_path / "data"
+    snapshot = data / "approved_snapshot"
+    snapshot.mkdir(parents=True)
+    source = snapshot / "authority.md"
+    source.write_text("Stage 0 is active.", encoding="utf-8")
+    build_manifest(snapshot, data / "index" / "manifest.json")
+    source.write_text("Stage 1 is active.", encoding="utf-8")
+    monkeypatch.chdir(tmp_path)
+
+    assert _ask("What stage is active?", use_openai=False) == 4
 
 
 def test_symlink_escape_is_rejected(tmp_path: Path) -> None:
