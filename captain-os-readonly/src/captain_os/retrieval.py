@@ -4,6 +4,8 @@ from dataclasses import dataclass
 import re
 from pathlib import Path
 
+from .sources import DEFAULT_MAX_FILE_BYTES, iter_approved_files
+
 TOKEN_RE = re.compile(r"[A-Za-z0-9][A-Za-z0-9_'’-]*")
 PARAGRAPH_SPLIT_RE = re.compile(r"\n\s*\n+")
 
@@ -30,15 +32,14 @@ def retrieve(
     *,
     max_results: int = 5,
     max_chars_per_result: int = 1600,
+    max_file_bytes: int = DEFAULT_MAX_FILE_BYTES,
 ) -> list[Passage]:
     query_tokens = _tokens(query)
     if not query_tokens:
         return []
 
     candidates: list[Passage] = []
-    for path in sorted(snapshot_dir.rglob("*")):
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
-            continue
+    for path in iter_approved_files(snapshot_dir, max_file_bytes=max_file_bytes):
         text = path.read_text(encoding="utf-8", errors="replace")
         relative = path.relative_to(snapshot_dir).as_posix()
 
