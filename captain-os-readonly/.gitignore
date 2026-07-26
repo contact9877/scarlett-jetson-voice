@@ -1,0 +1,16 @@
+.venv/
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.env
+.env.*
+!.env.example
+data/approved_snapshot/*
+!data/approved_snapshot/README.md
+data/index/
+logs/
+*.sqlite
+*.db
+.DS_Store
