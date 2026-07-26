@@ -28,6 +28,8 @@ jobs:
       - run: python -m pip install --upgrade pip
       - run: pip install -e ".[dev]"
       - name: Critical static checks
-        run: ruff check src tests scripts --select F,E9
+        run: ruff check src tests scripts evals --select F,E9
       - run: pytest -q
-      - run: python -m compileall -q src scripts
+      - name: Key-free retrieval evaluations
+        run: python evals/run_local.py
+      - run: python -m compileall -q src scripts evals
