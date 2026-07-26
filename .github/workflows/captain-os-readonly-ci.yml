@@ -1,0 +1,35 @@
+name: Captain OS Read-Only CI
+
+on:
+  push:
+    branches: ["review/captain-os-readonly-v0.2"]
+    paths:
+      - "captain-os-readonly/**"
+      - ".github/workflows/captain-os-readonly-ci.yml"
+  pull_request:
+    paths:
+      - "captain-os-readonly/**"
+      - ".github/workflows/captain-os-readonly-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: captain-os-readonly
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip
+      - run: pip install -e ".[dev]"
+      - name: Critical static checks
+        run: ruff check src tests scripts evals --select F,E9
+      - run: pytest -q
+      - name: Key-free retrieval evaluations
+        run: python evals/run_local.py
+      - run: python -m compileall -q src scripts evals
