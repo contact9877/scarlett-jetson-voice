@@ -1,7 +1,9 @@
 from pathlib import Path
 
+import pytest
+
 from captain_os.agent import INSTRUCTIONS
-from captain_os.manifest import build_manifest
+from captain_os.manifest import build_manifest, verify_manifest
 from captain_os.retrieval import retrieve
 
 
@@ -14,6 +16,44 @@ def test_manifest_hashes_only_approved_text(tmp_path: Path) -> None:
     assert payload["file_count"] == 1
     assert payload["entries"][0]["relative_path"] == "a.md"
     assert len(payload["entries"][0]["sha256"]) == 64
+
+
+def test_manifest_verification_detects_changed_source(tmp_path: Path) -> None:
+    snapshot = tmp_path / "approved_snapshot"
+    snapshot.mkdir()
+    source = snapshot / "authority.md"
+    source.write_text("version one", encoding="utf-8")
+    manifest = tmp_path / "index" / "manifest.json"
+    build_manifest(snapshot, manifest)
+
+    assert verify_manifest(snapshot, manifest)["ok"] is True
+    source.write_text("version two", encoding="utf-8")
+
+    report = verify_manifest(snapshot, manifest)
+    assert report["ok"] is False
+    assert report["changed"] == ["authority.md"]
+
+
+def test_symlink_escape_is_rejected(tmp_path: Path) -> None:
+    snapshot = tmp_path / "approved_snapshot"
+    snapshot.mkdir()
+    outside = tmp_path / "outside.md"
+    outside.write_text("secret outside snapshot", encoding="utf-8")
+    link = snapshot / "linked.md"
+    try:
+        link.symlink_to(outside)
+    except OSError:
+        pytest.skip("Symbolic links are unavailable in this environment.")
+
+    payload = build_manifest(snapshot, tmp_path / "index" / "manifest.json")
+    assert payload["file_count"] == 0
+    assert retrieve(snapshot, "secret outside snapshot") == []
+
+
+def test_oversized_source_is_rejected(tmp_path: Path) -> None:
+    source = tmp_path / "large.md"
+    source.write_text("large authority text", encoding="utf-8")
+    assert retrieve(tmp_path, "large authority", max_file_bytes=4) == []
 
 
 def test_retrieval_returns_source_citation(tmp_path: Path) -> None:
