@@ -3,10 +3,12 @@ from __future__ import annotations
 import argparse
 import json
 import os
+from pathlib import Path
 import sys
 
 from .agent import synthesize
 from .config import load_settings
+from .continuity import inspect_continuation_file
 from .manifest import build_manifest, verify_manifest
 from .retrieval import format_retrieval, retrieve
 
@@ -61,6 +63,20 @@ def _verify() -> int:
     return 0 if report["ok"] else 4
 
 
+def _check_continuation(path: str) -> int:
+    settings = load_settings()
+    try:
+        report = inspect_continuation_file(
+            Path(path),
+            max_file_bytes=settings.max_file_bytes,
+        )
+    except (OSError, ValueError) as exc:
+        print(f"Continuation check failed: {exc}", file=sys.stderr)
+        return 6
+    print(json.dumps(report, indent=2))
+    return 5 if report["requires_human_review"] else 0
+
+
 def _ask(question: str, use_openai: bool) -> int:
     settings = load_settings()
     report, error_code = _integrity_report()
@@ -101,6 +117,11 @@ def build_parser() -> argparse.ArgumentParser:
     commands.add_parser("doctor", help="Show local configuration and capability mode.")
     commands.add_parser("index", help="Build a hash manifest of approved text sources.")
     commands.add_parser("verify", help="Detect approved-source changes since indexing.")
+    continuity = commands.add_parser(
+        "check-continuation",
+        help="Classify a derived summary/handoff as context-only and flag integrity risks.",
+    )
+    continuity.add_argument("path", help="Path to a .md or .txt continuation artifact.")
     ask = commands.add_parser("ask", help="Verify integrity, then retrieve cited passages.")
     ask.add_argument("question")
     ask.add_argument("--openai", action="store_true", help="Use optional OpenAI synthesis.")
@@ -115,6 +136,8 @@ def main(argv: list[str] | None = None) -> int:
         return _index()
     if args.command == "verify":
         return _verify()
+    if args.command == "check-continuation":
+        return _check_continuation(args.path)
     if args.command == "ask":
         return _ask(args.question, args.openai)
     raise AssertionError("Unhandled command")
