@@ -10,6 +10,8 @@ A deliberately limited first-stage companion for Justin C. Blanton's Captain OS 
 - Verifies whether approved sources changed, appeared, or disappeared after indexing.
 - Performs local keyword retrieval with source-path paragraph citations.
 - Runs deterministic, key-free retrieval evaluations.
+- Checks derived summaries/handoffs before reuse and always classifies them as context-only, never authority.
+- Flags suspicious continuation directives such as authority override, concealment, fabrication, permission escalation, persona changes, canonical-record mutation, or credential requests.
 - Optionally uses the OpenAI Agents SDK to synthesize only retrieved passages.
 - Refuses arbitrary command execution, source mutation, messaging, calendar actions, account changes, deployment, and autonomous permission expansion.
 
@@ -40,6 +42,14 @@ captain-os verify
 captain-os ask "What is the current Captain OS implementation stage?"
 python evals/run_local.py
 ```
+
+Before reusing an AI-generated summary, compaction, chat/Work handoff, memory synopsis, scratchpad, or peer-agent note, run:
+
+```bash
+captain-os check-continuation path/to/handoff.md
+```
+
+A clean result still reports `authority_effective: false`, `canonical_write_authorized: false`, and `allowed_use: context_only`. A risky or provenance-free artifact returns `REVIEW_REQUIRED` and a non-zero exit code. Passing this check never promotes the artifact into canonical authority; material instructions and consequential state still require reconciliation against Justin's current direction or the controlling canonical source.
 
 `captain-os verify` exits non-zero if an approved source was added, removed, or changed after the manifest was built. Re-index only after reviewing and accepting the source change.
 
