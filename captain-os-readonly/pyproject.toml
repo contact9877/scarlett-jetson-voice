@@ -1,0 +1,30 @@
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
+
+[project]
+name = "captain-os-readonly"
+version = "0.2.0"
+description = "Read-only, source-cited Captain OS bootstrap"
+readme = "README.md"
+requires-python = ">=3.11"
+license = {text = "Private / All rights reserved"}
+authors = [{name = "Justin C. Blanton"}]
+dependencies = []
+
+[project.optional-dependencies]
+openai = ["openai-agents>=0.17.4,<0.18"]
+dev = ["pytest>=8.2", "ruff>=0.6", "mypy>=1.11"]
+
+[project.scripts]
+captain-os = "captain_os.cli:main"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/captain_os"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"

@@ -1,0 +1,67 @@
+name: Captain OS Read-Only CI
+
+on:
+  push:
+    branches: ["review/captain-os-readonly-v0.2"]
+    paths:
+      - "captain-os-readonly/**"
+      - ".github/workflows/captain-os-readonly-ci.yml"
+  pull_request:
+    paths:
+      - "captain-os-readonly/**"
+      - ".github/workflows/captain-os-readonly-ci.yml"
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      PIP_CONSTRAINT: ${{ github.workspace }}/captain-os-readonly/constraints/ci-runtime.txt
+      PIP_BUILD_CONSTRAINT: ${{ github.workspace }}/captain-os-readonly/constraints/ci-build.txt
+    defaults:
+      run:
+        working-directory: captain-os-readonly
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
+        with:
+          python-version: "3.11"
+      - run: python -m pip --version
+      - run: python -m pip install -e ".[dev]"
+      - name: Verify constrained CI toolchain
+        run: |
+          python - <<'PY'
+          from importlib.metadata import version
+          from pathlib import Path
+
+          expected = {}
+          for raw in Path("constraints/ci-runtime.txt").read_text(encoding="utf-8").splitlines():
+              line = raw.strip()
+              if not line or line.startswith("#"):
+                  continue
+              name, expected_version = line.split("==", 1)
+              expected[name] = expected_version
+
+          observed = {name: version(name) for name in expected}
+          if observed != expected:
+              raise SystemExit(f"CI toolchain mismatch: expected={expected!r} observed={observed!r}")
+          print("Constrained CI toolchain verified:", observed)
+          PY
+      - name: Verify incompatible constraint fails closed
+        run: |
+          printf 'pytest==0.0.0\n' > /tmp/captain-os-bad-constraint.txt
+          if PIP_CONSTRAINT=/tmp/captain-os-bad-constraint.txt python -m pip install --dry-run -e ".[dev]"; then
+            echo "ERROR: incompatible constraint unexpectedly resolved"
+            exit 1
+          fi
+          echo "Incompatible constraint correctly failed resolution."
+      - name: Critical static checks
+        run: ruff check src tests scripts evals --select F,E9
+      - run: pytest -q
+      - name: Key-free retrieval evaluations
+        run: python evals/run_local.py
+      - run: python -m compileall -q src scripts evals
