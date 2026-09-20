@@ -1,0 +1,16 @@
+# Captain OS read-only CI runtime/dev constraints
+# Snapshot: 2026-09-20, from successful GitHub Actions CI #83 on Python 3.11 / Ubuntu 24.04.
+# Purpose: make the tested CI toolchain reproducible without changing flexible project metadata.
+# Update deliberately: review package provenance/changelog, change this file, then require fresh CI + CodeQL.
+ast-serialize==0.11.2
+iniconfig==2.3.0
+librt==0.15.0
+mypy==2.3.1
+mypy-extensions==1.1.0
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.6.0
+Pygments==2.21.0
+pytest==9.1.1
+ruff==0.16.8
+typing-extensions==4.16.0
