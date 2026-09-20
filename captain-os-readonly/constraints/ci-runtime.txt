@@ -12,5 +12,5 @@ pathspec==1.1.1
 pluggy==1.6.0
 Pygments==2.21.0
 pytest==9.1.1
-ruff==0.16.7
+ruff==0.16.8
 typing-extensions==4.16.0
