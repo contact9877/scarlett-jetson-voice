@@ -100,7 +100,7 @@ def main() -> int:
 
     output = Path("environment_report.json")
     output.write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
-    print(f"Wrote non-secret environment inventory: {output.resolve()}")
+    print(f"Wrote non-secret environment inventory: {output.name}")
     return 0
 
 
