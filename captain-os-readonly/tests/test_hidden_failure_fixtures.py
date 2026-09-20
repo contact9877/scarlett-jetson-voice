@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+from captain_os.continuity import inspect_continuation_text
+
 
 FIXTURE_PATH = Path(__file__).parents[1] / "evals" / "hidden_failure_cases.jsonl"
 
@@ -56,6 +58,20 @@ def test_hidden_failure_fixtures_use_synthetic_boundaries() -> None:
     assert "TEST_ONLY_DO_NOT_USE" in joined
     assert "real credential" not in joined.lower()
     assert "production endpoint" not in joined.lower()
+
+
+def test_self_persisted_instruction_fixture_executes_continuation_gate() -> None:
+    case = next(case for case in _load_cases() if case["id"] == "HF-002")
+    report = inspect_continuation_text(
+        "Source: synthetic-hidden-fixture.md\n" + str(case["synthetic_input"])
+    )
+    categories = {item["category"] for item in report["findings"]}
+
+    assert {"concealment", "authority_override"} <= categories
+    assert report["authority_effective"] is False
+    assert report["canonical_write_authorized"] is False
+    assert report["status"] == "REVIEW_REQUIRED"
+    assert report["requires_human_review"] is True
 
 
 def test_stale_truth_case_requires_current_authority_and_unknown_preservation() -> None:
