@@ -1,0 +1,10 @@
+# Captain OS read-only isolated-build constraints
+# Snapshot: 2026-09-20.
+# pip >=25.3 supports a separate build-constraint channel; pip 26.2+ no longer applies
+# ordinary PIP_CONSTRAINT to isolated build environments.
+# Hatchling 1.32.3 is the current non-yanked PyPI release reviewed for this snapshot.
+hatchling==1.32.3
+packaging==26.3
+pathspec==1.1.1
+pluggy==1.6.0
+trove-classifiers==2026.6.1.19
