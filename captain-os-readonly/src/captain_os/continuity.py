@@ -10,7 +10,9 @@ RISK_PATTERNS: tuple[tuple[str, re.Pattern[str]], ...] = (
         "authority_override",
         re.compile(
             r"\b(ignore|override|disregard|bypass)\b.{0,100}"
-            r"\b(higher[- ]priority|system|developer|user|canonical|authority|policy)\b",
+            r"\b(higher[- ]priority|system|developer|user|canonical|authority|policy)\b"
+            r"|\b(treat|use)\b.{0,100}\b(summary|note|handoff|artifact|this)\b.{0,100}"
+            r"\b(as|like)\b.{0,40}\b(standing\s+)?(authority|policy|canonical)\b",
             re.IGNORECASE,
         ),
     ),
@@ -74,21 +76,25 @@ PROVENANCE_PATTERNS: tuple[re.Pattern[str], ...] = (
 )
 
 
-def _matching_lines(text: str, pattern: re.Pattern[str]) -> list[dict[str, object]]:
+def _matching_text(text: str, pattern: re.Pattern[str]) -> list[dict[str, object]]:
+    """Return risk matches, including directives split across line boundaries.
+
+    Replacing each newline with one space preserves string offsets, so a match can be
+    mapped back to the originating line without retaining an absolute file path.
+    """
+    flattened = text.replace("\n", " ")
     matches: list[dict[str, object]] = []
-    for number, line in enumerate(text.splitlines(), start=1):
-        match = pattern.search(line)
-        if not match:
-            continue
-        snippet = " ".join(line.strip().split())
-        matches.append({"line": number, "snippet": snippet[:240]})
+    for match in pattern.finditer(flattened):
+        line = text.count("\n", 0, match.start()) + 1
+        snippet = " ".join(match.group(0).strip().split())
+        matches.append({"line": line, "snippet": snippet[:240]})
     return matches
 
 
 def inspect_continuation_text(text: str, *, source: str = "<memory>") -> dict[str, object]:
     findings: list[dict[str, object]] = []
     for category, pattern in RISK_PATTERNS:
-        for item in _matching_lines(text, pattern):
+        for item in _matching_text(text, pattern):
             findings.append({"category": category, **item})
 
     provenance_refs: list[dict[str, object]] = []
@@ -129,4 +135,4 @@ def inspect_continuation_file(path: Path, *, max_file_bytes: int) -> dict[str, o
             f"Continuation artifact exceeds the configured size limit ({size} > {max_file_bytes})."
         )
     text = path.read_text(encoding="utf-8", errors="replace")
-    return inspect_continuation_text(text, source=str(path.resolve()))
+    return inspect_continuation_text(text, source=path.name)
